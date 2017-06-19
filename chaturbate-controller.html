@@ -1,0 +1,409 @@
+<link rel="import" href="../polymer/polymer-element.html">
+<link rel="import" href="../socket-io/socket-io.html">
+
+<dom-module id="chaturbate-controller">
+  <template>
+    <socket-io id="socket" events="[[events]]"></socket-io>
+  </template>
+
+  <script>
+    class ChaturbateController extends Polymer.Element {
+      static get is() {
+        return 'chaturbate-controller';
+      }
+
+      static get properties() {
+        return {
+          username: {
+            type: String,
+            notify: true,
+            reflectToAttribute: true
+          },
+          maxChatLength: {
+            type: Number,
+            notify: true,
+            value: 10,
+            reflectToAttribute: true
+          },
+          maxTipsLength: {
+            type: Number,
+            notify: true,
+            value: 5,
+            reflectToAttribute: true
+          },
+          connected: {
+            type: Boolean,
+            readOnly: true,
+            notify: true,
+            value: false,
+            reflectToAttribute: true
+          },
+          room: {
+            type: String,
+            readOnly: true,
+            notify: true,
+            value: '',
+            reflectToAttribute: true
+          },
+          online: {
+            type: Boolean,
+            readOnly: true,
+            notify: true,
+            value: false,
+            reflectToAttribute: true
+          },
+          welcomeMessage: {
+            type: String,
+            readOnly: true,
+            notify: true,
+            value: '',
+            reflectToAttribute: true
+          },
+          broadcasterGender: {
+            type: String,
+            readOnly: true,
+            notify: true,
+            value: '',
+            reflectToAttribute: true
+          },
+          currentSubject: {
+            type: String,
+            readOnly: true,
+            notify: true,
+            value: '',
+            reflectToAttribute: true
+          },
+          viewCount: {
+            type: Number,
+            readOnly: true,
+            notify: true,
+            value: 0,
+            reflectToAttribute: true
+          },
+          chat: {
+            type: Array,
+            readOnly: true,
+            notify: true,
+            value: [],
+            reflectToAttribute: true
+          },
+          tips: {
+            type: Array,
+            readOnly: true,
+            notify: true,
+            value: [],
+            reflectToAttribute: true
+          },
+          spyPrice: {
+            type: Number,
+            readOnly: true,
+            notify: true,
+            value: 0,
+            reflectToAttribute: true
+          },
+          privatePrice: {
+            type: Number,
+            readOnly: true,
+            notify: true,
+            value: 0,
+            reflectToAttribute: true
+          },
+          privatesEnabled: {
+            type: Boolean,
+            readOnly: true,
+            notify: true,
+            value: false,
+            reflectToAttribute: true
+          },
+          groupPrice: {
+            type: Number,
+            readOnly: true,
+            notify: true,
+            value: 0,
+            reflectToAttribute: true
+          },
+          groupsEnabled: {
+            type: Boolean,
+            readOnly: true,
+            notify: true,
+            value: false,
+            reflectToAttribute: true
+          },
+          numUsersRequiredForGroupShow: {
+            type: Number,
+            readOnly: true,
+            notify: true,
+            value: 0,
+            reflectToAttribute: true
+          },
+          numUsersWaitingForGroupShow: {
+            type: Number,
+            readOnly: true,
+            notify: true,
+            value: 0,
+            reflectToAttribute: true
+          }
+        }
+      }
+
+      static get observers() {
+        return [
+          '_onChatChanged(chat.length, maxChatLength)',
+          '_onTipsChanged(tips.length, maxTipsLength)'
+        ]
+      }
+
+      constructor() {
+        super();
+
+        this.events = {
+          // socket events
+          'connected': () => this._onConnected(),
+          'disconnected': () => this._onDisconnected(),
+          // server events
+          'init': (p) => this._onInit(p),
+          // chaturbate events
+          'app_error_log': (p) => this._onAppErrorLog(p),
+          'app_notice': (p) => this._onAppNotice(p),
+          'app_tab_refresh': () => this._onAppRefresh(),
+          'away_mode_cancel': () => this._onAwayModeCancel(),
+          'clear_app': () => this._onClearApp(),
+          'group_show_approve': (p) => this._onGroupShowApprove(p),
+          'group_show_cancel': () => this._onGroupShowCancel(),
+          'group_show_request': (p) => this._onGroupShowRequest(p),
+          'hidden_show_approve': (p) => this._onHiddenShowApprove(p),
+          'kick': (p) => this._onKick(p),
+          'leave_private_room': (p) => this._onLeavePrivateRoom(p),
+          'log': (p) => this._onLog(p),
+          'message_change_request': (p) => this._onMessageChangeRequest(p),
+          'personally_kicked': (p) => this._onPersonallyKicked(p),
+          'private_message': (p) => this._onPrivateMessage(),
+          'private_show_approve': (p) => this._onPrivateShowApprove(p),
+          'private_show_cancel': () => this._onPrivateShowCancel(),
+          'private_show_request': (p) => this._onPrivateShowRequest(p),
+          'promotion': (p) => this._onPromote(p),
+          'purchase': (p) => this._onPurchase(p),
+          'receive_tip': (p) => this._onReceiveTip(p),
+          'refresh_panel': () => this._onRefreshPanel(),
+          'revoke': (p) => this._onRevoke(p),
+          'room_count': (p) => this._onRoomCount(p),
+          'room_entry': (p) => this._onRoomEntry(p),
+          'room_leave': (p) => this._onRoomLeave(p),
+          'room_message': (p) => this._onRoomMessage(p),
+          'settings_update': (p) => this._onSettingsUpdate(p),
+          'silence': (p) => this._onSilence(p),
+          'tip': (p) => this._onTip(p),
+          'title_change': (p) => this._onTitleChange(p),
+          'token_balance_update': (p) => this._onTokenBalanceUpdate(p)
+        };
+      }
+
+      // =================================================
+      // property events
+      // =================================================
+
+      _onChatChanged(currentLen, maxLen) {
+        if (currentLen > maxLen) {
+          this.splice('chat', 0, (currentLen - maxLen));
+        }
+      }
+
+      _onTipsChanged(currentLen, maxLen) {
+        if (currentLen > maxLen) {
+          this.splice('tips', 0, (currentLen - maxLen));
+        }
+      }
+
+      // =================================================
+      // socket events
+      // =================================================
+
+      _onConnected() {
+        this._setConnected(true);
+        this.$.socket.emit('init', this.username);
+      }
+
+      _onDisconnected() {
+        this._setConnected(false);
+      }
+
+      // =================================================
+      // chaturbate events
+      // =================================================
+
+      _onInit(params) {
+        this._setOnline(params.hasWebsocket);
+        // chat settings
+        this._setWelcomeMessage(params.chatSettings.welcome_message);
+        this._setSpyPrice(params.chatSettings.spy_price);
+        this._setPrivatePrice(params.chatSettings.private_price);
+        this._setNumUsersRequiredForGroupShow(params.chatSettings.num_users_required_for_group_show);
+        this._setNumUsersWaitingForGroupShow(params.chatSettings.num_users_waiting_for_group_show);
+        this._setGroupPrice(params.chatSettings.group_price);
+        this._setCurrentSubject(params.chatSettings.current_subject);
+        this._setBroadcasterGender(params.chatSettings.broadcaster_gender);
+        // settings
+        this._setGroupsEnabled(params.settings.groups_enabled);
+        this._setPrivatesEnabled(params.settings.privates_enabled);
+        this._setRoom(params.settings.room);
+
+        this.dispatchEvent(new CustomEvent('init', {detail: params}));
+      }
+
+      _onAppErrorLog(params) {
+        this.dispatchEvent(new CustomEvent('app-error-log', {detail: params}));
+      }
+
+      _onAppNotice(params) {
+        this.dispatchEvent(new CustomEvent('app-notice', {detail: params}));
+      }
+
+      _onAppRefresh() {
+        this.dispatchEvent(new CustomEvent('app-refresh'));
+      }
+
+      _onAwayModeCancel() {
+        this.dispatchEvent(new CustomEvent('away-mode-cancel'));
+      }
+
+      _onClearApp() {
+        this.dispatchEvent(new CustomEvent('clear-app'));
+      }
+
+      _onGroupShowApprove(params) {
+        this.dispatchEvent(new CustomEvent('group-show-approve', {detail: params}));
+      }
+
+      _onGroupShowCancel() {
+        // ??? subtract 1 waiting, or reset all ???
+        this.dispatchEvent(new CustomEvent('group-show-cancel'));
+      }
+
+      _onGroupShowRequest(params) {
+        this._setNumUsersRequiredForGroupShow(params.usersRequired);
+        this._setNumUsersWaitingForGroupShow(params.usersWaiting);
+        this._setGroupPrice(params.tokensPerMinute);
+      }
+
+      _onHiddenShowApprove(params) {
+        this.dispatchEvent(new CustomEvent('hidden-show-approve', {detail: params}));
+      }
+
+      _onKick(params) {
+        this.dispatchEvent(new CustomEvent('kick', {detail: params}));
+      }
+
+      _onLeavePrivateRoom(params) {
+        this.dispatchEvent(new CustomEvent('leave-private', {detail: params}));
+      }
+
+      _onLog(params) {
+        this.dispatchEvent(new CustomEvent('log', {detail: params}));
+      }
+
+      _onMessageChangeRequest(params) {
+        this.dispatchEvent(new CustomEvent('message-change-request', {detail: params}));
+      }
+
+      _onPersonallyKicked(params) {
+        this.dispatchEvent(new CustomEvent('personally-kicked', {detail: params}));
+      }
+
+      _onPrivateMessage(params) {
+        this.dispatchEvent(new CustomEvent('private-message', {detail: params}));
+      }
+
+      _onPrivateShowApprove(params) {
+        this._setPrivatePrice(params.tokensPerMinute);
+        this.dispatchEvent(new CustomEvent('private-show-approve', {detail: params}));
+      }
+
+      _onPrivateShowCancel() {
+        this.dispatchEvent(new CustomEvent('private-show-cancel', {detail: params}));
+      }
+
+      _onPrivateShowRequest(params) {
+        this.dispatchEvent(new CustomEvent('private-show-request', {detail: params}));
+      }
+
+      _onPromote(params) {
+        this.dispatchEvent(new CustomEvent('promote', {detail: params}));
+      }
+
+      _onPurchase(params) {
+        this.dispatchEvent(new CustomEvent('purchase', {detail: params}));
+      }
+
+      _onReceiveTip(params) {
+        this.dispatchEvent(new CustomEvent('receive-tip', {detail: params}));
+      }
+
+      _onRefreshPanel() {
+        this.dispatchEvent(new CustomEvent('refresh-panel'));
+      }
+
+      _onRevoke(params) {
+        this.dispatchEvent(new CustomEvent('revoke', {detail: params}));
+      }
+
+      _onRoomCount(params) {
+        this._setViewCount(params.count);
+      }
+
+      _onRoomEntry(params) {
+        this.push('chat', {
+          type: 'ENTRY',
+          details: params
+        });
+
+        this.dispatchEvent(new CustomEvent('room-entry', {detail: params}));
+      }
+
+      _onRoomLeave(params) {
+        this.push('chat', {
+          type: 'LEAVE',
+          details: params
+        });
+
+        this.dispatchEvent(new CustomEvent('room-leave', {detail: params}));
+      }
+
+      _onRoomMessage(params) {
+        this.push('chat', {
+          type: 'MESSAGE',
+          details: params
+        });
+
+        this.dispatchEvent(new CustomEvent('room-message', {detail: params}));
+      }
+
+      _onSettingsUpdate(params) {
+        this._setSpyPrice(params.spyPrice);
+        this._setPrivatePrice(params.privatePrice);
+        this._setPrivatesEnabled(params.allowPrivates);
+        this._setNumUsersRequiredForGroupShow(params.minimumUsersForGroupShow);
+        this._setGroupPrice(params.groupPrice);
+        this._setGroupsEnabled(params.allowGroups);
+      }
+
+      _onSilence(params) {
+        this.dispatchEvent(new CustomEvent('silence', {detail: params}));
+      }
+
+      _onTip(params) {
+        this.push('tips', params);
+        this.dispatchEvent(new CustomEvent('tip', {detail: params}));
+      }
+
+      _onTitleChange(params) {
+        this._setCurrentSubject(params.title); 
+      }
+
+      _onTokenBalanceUpdate(params) {
+        this.dispatchEvent(new CustomEvent('token-balance-update', {detail: params}));
+      }
+    }
+
+    window.customElements.define(ChaturbateController.is, ChaturbateController);
+  </script>
+</dom-module>

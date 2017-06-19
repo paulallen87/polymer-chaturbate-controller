@@ -1,0 +1,25 @@
+{
+  "name": "chaturbate-controller",
+  "homepage": "https://github.com/paulallen87/polymer-chaturbate-controller",
+  "authors": [
+    "Paul Allen <paulallen87555@gmail.com>"
+  ],
+  "description": "A Polymer controller for interacting with a ChaturbateSocketServer.",
+  "main": "chaturbate-controller.html",
+  "keywords": [
+    "chaturbate"
+  ],
+  "license": "GPL-3.0",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "polymer": "Polymer/polymer#^2.0.0-rc.3",
+    "socket-io": "https://github.com/paulallen87/polymer-socket-io.git"
+  }
+}
