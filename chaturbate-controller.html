@@ -31,6 +31,19 @@
             value: 5,
             reflectToAttribute: true
           },
+          ready: {
+            type: Boolean,
+            notify: true,
+            reflectToAttribute: true,
+            computed: '_isReady(state, connected, online)'
+          },
+          state: {
+            type: String,
+            readOnly: true,
+            notify: true,
+            value: '',
+            reflectToAttribute: true
+          },
           connected: {
             type: Boolean,
             readOnly: true,
@@ -159,7 +172,7 @@
         this.events = {
           // socket events
           'connected': () => this._onConnected(),
-          'disconnected': () => this._onDisconnected(),
+          'disconnect': () => this._onDisconnected(),
           // server events
           'init': (p) => this._onInit(p),
           // chaturbate events
@@ -215,6 +228,14 @@
       }
 
       // =================================================
+      // computed properties
+      // =================================================
+
+      _isReady(state, connected, online) {
+        return state == 'SOCKET_OPEN' && connected && online;
+      }
+
+      // =================================================
       // socket events
       // =================================================
 
@@ -232,21 +253,20 @@
       // =================================================
 
       _onInit(params) {
-        this._setOnline(params.hasWebsocket);
-        // chat settings
-        this._setWelcomeMessage(params.chatSettings.welcome_message);
-        this._setSpyPrice(params.chatSettings.spy_price);
-        this._setPrivatePrice(params.chatSettings.private_price);
-        this._setNumUsersRequiredForGroupShow(params.chatSettings.num_users_required_for_group_show);
-        this._setNumUsersWaitingForGroupShow(params.chatSettings.num_users_waiting_for_group_show);
-        this._setGroupPrice(params.chatSettings.group_price);
-        this._setCurrentSubject(params.chatSettings.current_subject);
-        this._setBroadcasterGender(params.chatSettings.broadcaster_gender);
-        // settings
-        this._setGroupsEnabled(params.settings.groups_enabled);
-        this._setPrivatesEnabled(params.settings.privates_enabled);
-        this._setRoom(params.settings.room);
-
+        this._setState(params.state);
+        this._setOnline(params.online);
+        this._setRoom(params.room);
+        this._setWelcomeMessage(params.welcomeMessage);
+        this._setCurrentSubject(params.subject);
+        this._setBroadcasterGender(params.gender);
+        this._setViewCount(params.viewCount);
+        this._setSpyPrice(params.spyPrice);
+        this._setGroupsEnabled(params.groupsEnabled);
+        this._setGroupPrice(params.groupPrice);
+        this._setNumUsersRequiredForGroupShow(params.groupNumUsersRequired);
+        this._setNumUsersWaitingForGroupShow(params.groupNumUsersWaiting);
+        this._setPrivatesEnabled(params.privatesEnabled);
+        this._setPrivatePrice(params.privatePrice);
         this.dispatchEvent(new CustomEvent('init', {detail: params}));
       }
 
