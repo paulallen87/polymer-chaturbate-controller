@@ -7,6 +7,26 @@
   </template>
 
   <script>
+    const State = {
+      INIT: 'INIT',
+      CONNECTING: 'CONNECTING',
+      CONNECTED: 'CONNECTED',
+      JOINED: 'JOINED',
+      LEAVE: 'LEAVE',
+      KICKED: 'KICKED',
+      DISCONNECTED: 'DISCONNECTED',
+      ERROR: 'ERROR',
+      FAIL: 'FAIL',
+      OFFLINE: 'OFFLINE'
+    }
+
+    const ModelStatus = {
+      PUBLIC: 'PUBLIC',
+      AWAY: 'AWAY',
+      PRIVATE: 'PRIVATE',
+      GROUP: 'GROUP'
+    }
+
     class ChaturbateController extends Polymer.Element {
       static get is() {
         return 'chaturbate-controller';
@@ -35,7 +55,7 @@
             type: Boolean,
             notify: true,
             reflectToAttribute: true,
-            computed: '_isReady(state, connected, online)'
+            computed: '_isReady(connected, state)'
           },
           state: {
             type: String,
@@ -58,11 +78,11 @@
             value: '',
             reflectToAttribute: true
           },
-          online: {
-            type: Boolean,
+          modelStatus: {
+            type: String,
             readOnly: true,
             notify: true,
-            value: false,
+            value: ModelStatus.PUBLIC,
             reflectToAttribute: true
           },
           welcomeMessage: {
@@ -101,6 +121,20 @@
             reflectToAttribute: true
           },
           tips: {
+            type: Array,
+            readOnly: true,
+            notify: true,
+            value: [],
+            reflectToAttribute: true
+          },
+          panel: {
+            type: Array,
+            readOnly: true,
+            notify: true,
+            value: [],
+            reflectToAttribute: true
+          },
+          appInfo: {
             type: Array,
             readOnly: true,
             notify: true,
@@ -175,12 +209,23 @@
           'disconnect': () => this._onDisconnected(),
           // server events
           'init': (p) => this._onInit(p),
+          'state_change': (p) => this._onStateChange(p),
+          'model_status_change': (p) => this._onModelStatusChange(p),
+          // chaturbate personal events
+          'auth': (p) => this._onAuth(p),
+          'personally_kicked': (p) => this._onPersonallyKicked(p),
+          'joined_room': (p) => this._onJoinedRoom(p),
+          'joined_private_room': (p) => this._onJoinedPrivateRoom(p),
+          'send_private_message': (p) => this._onSendPrivateMessage(p),
+          'send_room_message': (p) => this._onSendRoomMessage(p),
+          'send_kick_message': (p) => this._onSendKickMessage(p),
+          'leave_room': (p) => this._onLeaveRoom(p),
           // chaturbate events
           'app_error_log': (p) => this._onAppErrorLog(p),
           'app_notice': (p) => this._onAppNotice(p),
-          'app_tab_refresh': () => this._onAppRefresh(),
+          'app_tab_refresh': () => this._onAppTabRefresh(),
           'away_mode_cancel': () => this._onAwayModeCancel(),
-          'clear_app': () => this._onClearApp(),
+          'clear_app': (p) => this._onClearApp(p),
           'group_show_approve': (p) => this._onGroupShowApprove(p),
           'group_show_cancel': () => this._onGroupShowCancel(),
           'group_show_request': (p) => this._onGroupShowRequest(p),
@@ -189,7 +234,6 @@
           'leave_private_room': (p) => this._onLeavePrivateRoom(p),
           'log': (p) => this._onLog(p),
           'message_change_request': (p) => this._onMessageChangeRequest(p),
-          'personally_kicked': (p) => this._onPersonallyKicked(p),
           'private_message': (p) => this._onPrivateMessage(),
           'private_show_approve': (p) => this._onPrivateShowApprove(p),
           'private_show_cancel': () => this._onPrivateShowCancel(),
@@ -197,7 +241,7 @@
           'promotion': (p) => this._onPromote(p),
           'purchase': (p) => this._onPurchase(p),
           'receive_tip': (p) => this._onReceiveTip(p),
-          'refresh_panel': () => this._onRefreshPanel(),
+          'refresh_panel': (p) => this._onRefreshPanel(p),
           'revoke': (p) => this._onRevoke(p),
           'room_count': (p) => this._onRoomCount(p),
           'room_entry': (p) => this._onRoomEntry(p),
@@ -231,8 +275,8 @@
       // computed properties
       // =================================================
 
-      _isReady(state, connected, online) {
-        return state == 'SOCKET_OPEN' && connected && online;
+      _isReady(connected, state) {
+        return  connected && state == State.JOINED;
       }
 
       // =================================================
@@ -242,19 +286,21 @@
       _onConnected() {
         this._setConnected(true);
         this.$.socket.emit('init', this.username);
+        this.dispatchEvent(new CustomEvent('connected'));
       }
 
       _onDisconnected() {
         this._setConnected(false);
+        this.dispatchEvent(new CustomEvent('disconnected'));
       }
 
       // =================================================
-      // chaturbate events
+      // controller events
       // =================================================
 
       _onInit(params) {
         this._setState(params.state);
-        this._setOnline(params.online);
+        this._setModelStatus(params.modelStatus);
         this._setRoom(params.room);
         this._setWelcomeMessage(params.welcomeMessage);
         this._setCurrentSubject(params.subject);
@@ -267,8 +313,61 @@
         this._setNumUsersWaitingForGroupShow(params.groupNumUsersWaiting);
         this._setPrivatesEnabled(params.privatesEnabled);
         this._setPrivatePrice(params.privatePrice);
+        this._setAppInfo(params.appInfo);
+        this._setPanel(params.panel);
+
         this.dispatchEvent(new CustomEvent('init', {detail: params}));
       }
+
+      _onStateChange(params) {
+        this._setState(params.state);
+        this.dispatchEvent(new CustomEvent('state-change', {detail: params}));
+      }
+
+      _onModelStatusChange(params) {
+        this._setModelStatus(params.status);
+        this.dispatchEvent(new CustomEvent('model-status-change', {detail: params}));
+      }
+
+      // =================================================
+      // chaturbate personal events
+      // =================================================
+
+      _onAuth(params) {
+        this.dispatchEvent(new CustomEvent('auth', {detail: params}));
+      }
+
+      _onJoinedRoom(params) {
+        this.dispatchEvent(new CustomEvent('joined-room', {detail: params}));
+      }
+
+      _onJoinedPrivateRoom(params) {
+        this.dispatchEvent(new CustomEvent('joined-private-room', {detail: params}));
+      }
+
+      _onLeaveRoom(params) {
+        this.dispatchEvent(new CustomEvent('leave-room', {detail: params}));
+      }
+
+      _onPersonallyKicked(params) {
+        this.dispatchEvent(new CustomEvent('personally-kicked', {detail: params}));
+      }
+
+      _onSendKickMessage(params) {
+        this.dispatchEvent(new CustomEvent('send-kick-message', {detail: params}));
+      }
+
+      _onSendPrivateMessage(params) {
+        this.dispatchEvent(new CustomEvent('send-private-message', {detail: params}));
+      }
+
+      _onSendRoomMessage(params) {
+        this.dispatchEvent(new CustomEvent('senf-room-message', {detail: params}));
+      }
+
+      // =================================================
+      // chaturbate events
+      // =================================================
 
       _onAppErrorLog(params) {
         this.dispatchEvent(new CustomEvent('app-error-log', {detail: params}));
@@ -278,16 +377,18 @@
         this.dispatchEvent(new CustomEvent('app-notice', {detail: params}));
       }
 
-      _onAppRefresh() {
-        this.dispatchEvent(new CustomEvent('app-refresh'));
+      _onAppTabRefresh() {
+        this._setPanel(params.panel);
+        this.dispatchEvent(new CustomEvent('app-refresh', {detail: params}));
       }
 
       _onAwayModeCancel() {
         this.dispatchEvent(new CustomEvent('away-mode-cancel'));
       }
 
-      _onClearApp() {
-        this.dispatchEvent(new CustomEvent('clear-app'));
+      _onClearApp(params) {
+        this._setPanel(params.panel);
+        this.dispatchEvent(new CustomEvent('clear-app', {detail: params}));
       }
 
       _onGroupShowApprove(params) {
@@ -295,7 +396,6 @@
       }
 
       _onGroupShowCancel() {
-        // ??? subtract 1 waiting, or reset all ???
         this.dispatchEvent(new CustomEvent('group-show-cancel'));
       }
 
@@ -303,6 +403,7 @@
         this._setNumUsersRequiredForGroupShow(params.usersRequired);
         this._setNumUsersWaitingForGroupShow(params.usersWaiting);
         this._setGroupPrice(params.tokensPerMinute);
+        this.dispatchEvent(new CustomEvent('group-show-request', {detail: params}));
       }
 
       _onHiddenShowApprove(params) {
@@ -323,10 +424,6 @@
 
       _onMessageChangeRequest(params) {
         this.dispatchEvent(new CustomEvent('message-change-request', {detail: params}));
-      }
-
-      _onPersonallyKicked(params) {
-        this.dispatchEvent(new CustomEvent('personally-kicked', {detail: params}));
       }
 
       _onPrivateMessage(params) {
@@ -358,8 +455,9 @@
         this.dispatchEvent(new CustomEvent('receive-tip', {detail: params}));
       }
 
-      _onRefreshPanel() {
-        this.dispatchEvent(new CustomEvent('refresh-panel'));
+      _onRefreshPanel(params) {
+        this._setPanel(params.panel);
+        this.dispatchEvent(new CustomEvent('refresh-panel', {detail: params}));
       }
 
       _onRevoke(params) {
@@ -368,6 +466,7 @@
 
       _onRoomCount(params) {
         this._setViewCount(params.count);
+        this.dispatchEvent(new CustomEvent('room-count', {detail: params}));
       }
 
       _onRoomEntry(params) {
@@ -417,6 +516,7 @@
 
       _onTitleChange(params) {
         this._setCurrentSubject(params.title); 
+        this.dispatchEvent(new CustomEvent('title-change', {detail: params}));
       }
 
       _onTokenBalanceUpdate(params) {
