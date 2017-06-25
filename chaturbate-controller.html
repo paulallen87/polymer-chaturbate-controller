@@ -416,7 +416,7 @@
         this.dispatchEvent(new CustomEvent('app-notice', {detail: params}));
       }
 
-      _onAppTabRefresh() {
+      _onAppTabRefresh(params) {
         this._setPanel(params.panel);
         this.dispatchEvent(new CustomEvent('app-refresh', {detail: params}));
       }
