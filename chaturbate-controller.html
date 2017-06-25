@@ -37,6 +37,7 @@
           username: {
             type: String,
             notify: true,
+            value: null,
             reflectToAttribute: true
           },
           maxChatLength: {
@@ -138,8 +139,31 @@
             type: Array,
             readOnly: true,
             notify: true,
-            value: [],
-            reflectToAttribute: true
+            value: []
+          },
+          appName1: {
+            type: String,
+            notify: true,
+            reflectToAttribute: true,
+            computed: '_getAppName(appInfo, 0)'
+          },
+          appName2: {
+            type: String,
+            notify: true,
+            reflectToAttribute: true,
+            computed: '_getAppName(appInfo, 1)'
+          },
+          appName3: {
+            type: String,
+            notify: true,
+            reflectToAttribute: true,
+            computed: '_getAppName(appInfo, 2)'
+          },
+          appName4: {
+            type: String,
+            notify: true,
+            reflectToAttribute: true,
+            computed: '_getAppName(appInfo, 3)'
           },
           spyPrice: {
             type: Number,
@@ -279,13 +303,28 @@
         return  connected && state == State.JOINED;
       }
 
+      _getAppName(appInfo, slot) {
+        if (!appInfo) return;
+        if (appInfo.length < slot + 1) return;
+
+        const app = appInfo.find((app) => {
+          return app.slot == slot;
+        });
+
+        if (!app) return;
+
+        return app.name;
+      }
+
       // =================================================
       // socket events
       // =================================================
 
       _onConnected() {
         this._setConnected(true);
-        this.$.socket.emit('init', this.username);
+        if (this.username) {
+          this.$.socket.emit('init', this.username);
+        }
         this.dispatchEvent(new CustomEvent('connected'));
       }
 
