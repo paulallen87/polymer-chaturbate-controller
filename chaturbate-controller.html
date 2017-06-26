@@ -135,6 +135,13 @@
             value: [],
             reflectToAttribute: true
           },
+          goal: {
+            type: Object,
+            readOnly: true,
+            notify: true,
+            value: {},
+            reflectToAttribute: true
+          },
           appInfo: {
             type: Array,
             readOnly: true,
@@ -235,6 +242,8 @@
           'init': (p) => this._onInit(p),
           'state_change': (p) => this._onStateChange(p),
           'model_status_change': (p) => this._onModelStatusChange(p),
+          'goal_progress': (p) => this._onGoalProgress(p),
+          'goal_reached': (p) => this._onGoalReached(p),
           // chaturbate personal events
           'auth': (p) => this._onAuth(p),
           'personally_kicked': (p) => this._onPersonallyKicked(p),
@@ -354,6 +363,7 @@
         this._setPrivatePrice(params.privatePrice);
         this._setAppInfo(params.appInfo);
         this._setPanel(params.panel);
+        this._setGoal(params.goal);
 
         this.dispatchEvent(new CustomEvent('init', {detail: params}));
       }
@@ -366,6 +376,16 @@
       _onModelStatusChange(params) {
         this._setModelStatus(params.status);
         this.dispatchEvent(new CustomEvent('model-status-change', {detail: params}));
+      }
+
+      _onGoalProgress(params) {
+        this._setGoal(params);
+        this.dispatchEvent(new CustomEvent('goal-progress', {detail: params}));
+      }
+
+      _onGoalReached(params) {
+        this._setGoal(params);
+        this.dispatchEvent(new CustomEvent('goal-reached', {detail: params}));
       }
 
       // =================================================
@@ -418,6 +438,7 @@
 
       _onAppTabRefresh(params) {
         this._setPanel(params.panel);
+        this._setGoal(params.goal);
         this.dispatchEvent(new CustomEvent('app-refresh', {detail: params}));
       }
 
@@ -427,6 +448,7 @@
 
       _onClearApp(params) {
         this._setPanel(params.panel);
+        this._setGoal(params.goal);
         this.dispatchEvent(new CustomEvent('clear-app', {detail: params}));
       }
 
@@ -496,6 +518,7 @@
 
       _onRefreshPanel(params) {
         this._setPanel(params.panel);
+        this._setGoal(params.goal);
         this.dispatchEvent(new CustomEvent('refresh-panel', {detail: params}));
       }
 
