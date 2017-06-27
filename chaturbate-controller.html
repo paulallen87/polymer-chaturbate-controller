@@ -256,7 +256,7 @@
           // chaturbate events
           'app_error_log': (p) => this._onAppErrorLog(p),
           'app_notice': (p) => this._onAppNotice(p),
-          'app_tab_refresh': () => this._onAppTabRefresh(),
+          'app_tab_refresh': (p) => this._onAppTabRefresh(p),
           'away_mode_cancel': () => this._onAwayModeCancel(),
           'clear_app': (p) => this._onClearApp(p),
           'group_show_approve': (p) => this._onGroupShowApprove(p),
