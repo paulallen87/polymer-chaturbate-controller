@@ -309,7 +309,7 @@
       // =================================================
 
       _isReady(connected, state) {
-        return  connected && state == State.JOINED;
+        return  connected && (state == State.CONNECTED || state == State.JOINED);
       }
 
       _getAppName(appInfo, slot) {
@@ -447,8 +447,8 @@
       }
 
       _onClearApp(params) {
-        this._setPanel(params.panel);
-        this._setGoal(params.goal);
+        this._setPanel(null);
+        this._setGoal(null);
         this.dispatchEvent(new CustomEvent('clear-app', {detail: params}));
       }
 
