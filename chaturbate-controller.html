@@ -309,7 +309,10 @@
       // =================================================
 
       _isReady(connected, state) {
-        return  connected && (state == State.CONNECTED || state == State.JOINED);
+        return  connected && (
+          state == State.CONNECTING ||
+          state == State.CONNECTED ||
+          state == State.JOINED);
       }
 
       _getAppName(appInfo, slot) {
@@ -437,8 +440,10 @@
       }
 
       _onAppTabRefresh(params) {
-        this._setPanel(params.panel);
-        this._setGoal(params.goal);
+        if (params) {
+          this._setPanel(params.panel);
+          this._setGoal(params.goal);
+        }
         this.dispatchEvent(new CustomEvent('app-refresh', {detail: params}));
       }
 
@@ -517,8 +522,10 @@
       }
 
       _onRefreshPanel(params) {
-        this._setPanel(params.panel);
-        this._setGoal(params.goal);
+        if (params) {
+          this._setPanel(params.panel);
+          this._setGoal(params.goal);
+        }
         this.dispatchEvent(new CustomEvent('refresh-panel', {detail: params}));
       }
 
